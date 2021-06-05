@@ -23,7 +23,8 @@ public final class PhoneNumberKit: NSObject {
 
     public init(metadataCallback: @escaping MetadataCallback = PhoneNumberKit.defaultMetadataCallback) {
         self.metadataManager = MetadataManager(metadataCallback: metadataCallback)
-        self.parseManager = ParseManager(metadataManager: self.metadataManager, regexManager: self.regexManager)
+        self.parseManager = ParseManager(metadataManager: self.metadataManager,
+                                         regexManager: self.regexManager)
     }
 
     // MARK: Parsing

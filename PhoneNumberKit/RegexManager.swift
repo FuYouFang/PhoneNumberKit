@@ -13,9 +13,12 @@ final class RegexManager {
 
     var regularExpresionPool = [String: NSRegularExpression]()
 
-    private let regularExpressionPoolQueue = DispatchQueue(label: "com.phonenumberkit.regexpool", attributes: .concurrent)
+    // concurrent 并行队列
+    private let regularExpressionPoolQueue = DispatchQueue(label: "com.phonenumberkit.regexpool",
+                                                           attributes: .concurrent)
 
     var spaceCharacterSet: CharacterSet = {
+        // 不换行空格
         let characterSet = NSMutableCharacterSet(charactersIn: "\u{00a0}")
         characterSet.formUnion(with: CharacterSet.whitespacesAndNewlines)
         return characterSet as CharacterSet
@@ -26,6 +29,9 @@ final class RegexManager {
     func regexWithPattern(_ pattern: String) throws -> NSRegularExpression {
         var cached: NSRegularExpression?
 
+        // 将数组的操作都放到了自己的 并行队列中，
+        // 读取使用的是 .sync
+        // 设置使用    .async(flags: .barrier)
         self.regularExpressionPoolQueue.sync {
             cached = self.regularExpresionPool[pattern]
         }
@@ -35,7 +41,9 @@ final class RegexManager {
         }
 
         do {
-            let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+            // caseInsensitive 忽略大小写
+            let regex = try NSRegularExpression(pattern: pattern,
+                                                options: .caseInsensitive)
 
             regularExpressionPoolQueue.async(flags: .barrier) {
                 self.regularExpresionPool[pattern] = regex
@@ -130,17 +138,24 @@ final class RegexManager {
 
     func replaceStringByRegex(_ pattern: String, string: String) -> String {
         do {
+            // 判断匹配的个数
+            // 1.1 如果个数为 1，则找到第一个匹配的位置，则第一个匹配的位置上进行替换
+            // 1.2 如果个数大于 1，
+            #warning("问题：为啥需要判断，匹配的个数是多少个？")
             var replacementResult = string
             let regex = try regexWithPattern(pattern)
             let matches = regex.matches(in: string)
             if matches.count == 1 {
-                let range = regex.rangeOfFirstMatch(in: string)
-                if range != nil {
-                    replacementResult = regex.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: "")
+                if let range = regex.rangeOfFirstMatch(in: string) {
+                    replacementResult = regex.stringByReplacingMatches(in: string,
+                                                                       options: [],
+                                                                       range: range,
+                                                                       withTemplate: "")
                 }
                 return replacementResult
             } else if matches.count > 1 {
-                replacementResult = regex.stringByReplacingMatches(in: string, withTemplate: "")
+                replacementResult = regex.stringByReplacingMatches(in: string,
+                                                                   withTemplate: "")
             }
             return replacementResult
         } catch {

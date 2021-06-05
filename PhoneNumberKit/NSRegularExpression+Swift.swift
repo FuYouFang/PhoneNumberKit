@@ -13,7 +13,8 @@ extension String {
         let utf16view = self.utf16
         let from = range.lowerBound.samePosition(in: utf16view) ?? self.startIndex
         let to = range.upperBound.samePosition(in: utf16view) ?? self.endIndex
-        return NSRange(location: utf16view.distance(from: utf16view.startIndex, to: from), length: utf16view.distance(from: from, to: to))
+        return NSRange(location: utf16view.distance(from: utf16view.startIndex, to: from),
+                       length: utf16view.distance(from: from, to: to))
     }
 
     func range(from nsRange: NSRange) -> Range<String.Index>? {
@@ -27,7 +28,9 @@ extension String {
     }
 }
 
+// 将使用 NSRange 的方法，转化成了 Range
 extension NSRegularExpression {
+
     #if canImport(ObjectiveC)
     func enumerateMatches(in string: String, options: NSRegularExpression.MatchingOptions = [], range: Range<String.Index>? = nil, using block: (NSTextCheckingResult?, NSRegularExpression.MatchingFlags, UnsafeMutablePointer<ObjCBool>) -> Swift.Void) {
         let range = range ?? string.startIndex..<string.endIndex
@@ -45,7 +48,9 @@ extension NSRegularExpression {
     }
     #endif
 
-    func matches(in string: String, options: NSRegularExpression.MatchingOptions = [], range: Range<String.Index>? = nil) -> [NSTextCheckingResult] {
+    func matches(in string: String,
+                 options: NSRegularExpression.MatchingOptions = [],
+                 range: Range<String.Index>? = nil) -> [NSTextCheckingResult] {
         let range = range ?? string.startIndex..<string.endIndex
         let nsRange = string.nsRange(from: range)
 
@@ -75,7 +80,10 @@ extension NSRegularExpression {
         return string.range(from: match)
     }
 
-    func stringByReplacingMatches(in string: String, options: NSRegularExpression.MatchingOptions = [], range: Range<String.Index>? = nil, withTemplate templ: String) -> String {
+    func stringByReplacingMatches(in string: String,
+                                  options: NSRegularExpression.MatchingOptions = [],
+                                  range: Range<String.Index>? = nil,
+                                  withTemplate templ: String) -> String {
         let range = range ?? string.startIndex..<string.endIndex
         let nsRange = string.nsRange(from: range)
 

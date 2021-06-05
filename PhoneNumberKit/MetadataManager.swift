@@ -51,9 +51,11 @@ final class MetadataManager {
     private func populateTerritories(metadataCallback: MetadataCallback) -> [MetadataTerritory] {
         var territoryArray = [MetadataTerritory]()
         do {
-            let jsonData: Data? = try metadataCallback()
+            guard let jsonData = try metadataCallback() else {
+                return territoryArray
+            }
             let jsonDecoder = JSONDecoder()
-            if let jsonData = jsonData, let metadata: PhoneNumberMetadata = try? jsonDecoder.decode(PhoneNumberMetadata.self, from: jsonData) {
+            if let metadata: PhoneNumberMetadata = try? jsonDecoder.decode(PhoneNumberMetadata.self, from: jsonData) {
                 territoryArray = metadata.territories
             }
         } catch {
