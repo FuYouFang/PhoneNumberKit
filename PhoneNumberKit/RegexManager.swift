@@ -136,35 +136,12 @@ final class RegexManager {
 
     // MARK: String and replace
 
-    func replaceStringByRegex(_ pattern: String, string: String) -> String {
+    func replaceStringByRegex(_ pattern: String, string: String, template: String = "") -> String {
         do {
             // 判断匹配的个数
             // 1.1 如果个数为 1，则找到第一个匹配的位置，则第一个匹配的位置上进行替换
             // 1.2 如果个数大于 1，
             #warning("问题：为啥需要判断，匹配的个数是多少个？")
-            var replacementResult = string
-            let regex = try regexWithPattern(pattern)
-            let matches = regex.matches(in: string)
-            if matches.count == 1 {
-                if let range = regex.rangeOfFirstMatch(in: string) {
-                    replacementResult = regex.stringByReplacingMatches(in: string,
-                                                                       options: [],
-                                                                       range: range,
-                                                                       withTemplate: "")
-                }
-                return replacementResult
-            } else if matches.count > 1 {
-                replacementResult = regex.stringByReplacingMatches(in: string,
-                                                                   withTemplate: "")
-            }
-            return replacementResult
-        } catch {
-            return string
-        }
-    }
-
-    func replaceStringByRegex(_ pattern: String, string: String, template: String) -> String {
-        do {
             var replacementResult = string
             let regex = try regexWithPattern(pattern)
             let matches = regex.matches(in: string)
@@ -186,8 +163,7 @@ final class RegexManager {
     func replaceFirstStringByRegex(_ pattern: String, string: String, templateString: String) -> String {
         do {
             let regex = try regexWithPattern(pattern)
-            let range = regex.rangeOfFirstMatch(in: string)
-            if range != nil {
+            if let range = regex.rangeOfFirstMatch(in: string) {
                 return regex.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: templateString)
             }
             return string
@@ -198,15 +174,14 @@ final class RegexManager {
 
     func stringByReplacingOccurrences(_ string: String, map: [String: String], keepUnmapped: Bool = false) -> String {
         var targetString = String()
-        for i in 0..<string.count {
-            let oneChar = string[string.index(string.startIndex, offsetBy: i)]
-            let keyString = String(oneChar).uppercased()
-            if let mappedValue = map[keyString] {
-                targetString.append(mappedValue)
-            } else if keepUnmapped {
-                targetString.append(keyString)
+        string.map { $0.uppercased() }
+            .forEach { (keyString) in
+                if let mappedValue = map[keyString] {
+                    targetString.append(mappedValue)
+                } else if keepUnmapped {
+                    targetString.append(keyString)
+                }
             }
-        }
         return targetString
     }
 
