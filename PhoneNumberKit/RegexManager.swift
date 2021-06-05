@@ -160,9 +160,11 @@ final class RegexManager {
         }
     }
 
+    // 转化第一个匹配到的字符串
     func replaceFirstStringByRegex(_ pattern: String, string: String, templateString: String) -> String {
         do {
             let regex = try regexWithPattern(pattern)
+            
             if let range = regex.rangeOfFirstMatch(in: string) {
                 return regex.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: templateString)
             }
