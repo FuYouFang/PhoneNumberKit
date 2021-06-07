@@ -103,7 +103,6 @@ final class PhoneNumberParser {
             startPosition = 1
         }
         
-        #warning("todo 这里可以 pull request")
         for i in 1...min(numberLength - startPosition, maxCountryCode) {
             let stringRange = NSRange(location: startPosition, length: i)
             let subNumber = nsFullNumber.substring(with: stringRange)
@@ -129,7 +128,8 @@ final class PhoneNumberParser {
         guard let generalNumberDesc = metadata.generalDesc else {
             return .unknown
         }
-        if self.regex.hasValue(generalNumberDesc.nationalNumberPattern) == false || self.isNumberMatchingDesc(nationalNumber, numberDesc: generalNumberDesc) == false {
+        if !self.regex.hasValue(generalNumberDesc.nationalNumberPattern)
+            || !self.isNumberMatchingDesc(nationalNumber, numberDesc: generalNumberDesc) {
             return .unknown
         }
         if self.isNumberMatchingDesc(nationalNumber, numberDesc: metadata.pager) {

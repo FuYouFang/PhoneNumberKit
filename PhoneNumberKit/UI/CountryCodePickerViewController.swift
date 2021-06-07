@@ -22,6 +22,7 @@ public class CountryCodePickerViewController: UITableViewController {
     var hasCurrent = true
     var hasCommon = true
 
+    // caseInsensitiveCompare
     lazy var allCountries = phoneNumberKit
         .allCountries()
         .compactMap({ Country(for: $0, with: self.phoneNumberKit) })
@@ -215,7 +216,7 @@ public extension CountryCodePickerViewController {
         public var prefix: String
 
         public init?(for countryCode: String, with phoneNumberKit: PhoneNumberKit) {
-            let flagBase = UnicodeScalar("🇦").value - UnicodeScalar("A").value
+            
             guard
                 let name = (Locale.current as NSLocale).localizedString(forCountryCode: countryCode),
                 let prefix = phoneNumberKit.countryCode(for: countryCode)?.description
@@ -226,15 +227,24 @@ public extension CountryCodePickerViewController {
             self.code = countryCode
             self.name = name
             self.prefix = "+" + prefix
-            self.flag = ""
+            guard let flag = Country.getFlag(countryCode: countryCode) else {
+                return nil
+            }
+            self.flag = flag
+        }
+        
+        static func getFlag(countryCode: String) -> String? {
+            var flag = ""
+            let flagBase = UnicodeScalar("🇦").value - UnicodeScalar("A").value
             countryCode.uppercased().unicodeScalars.forEach {
                 if let scaler = UnicodeScalar(flagBase + $0.value) {
                     flag.append(String(describing: scaler))
                 }
             }
-            if flag.count != 1 { // Failed to initialize a flag ... use an empty string
+            guard flag.count == 1 else {
                 return nil
             }
+            return flag
         }
     }
 

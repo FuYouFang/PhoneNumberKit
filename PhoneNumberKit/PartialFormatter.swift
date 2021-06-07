@@ -153,6 +153,8 @@ public final class PartialFormatter {
         do {
             // In addition to validPhoneNumberPattern,
             // accept any sequence of digits and whitespace, prefixed or not by a plus sign
+            // 1. 整体符合 2. 开头必须是制定的字符
+            // 比如 * 可以放在中间，但是不可放在开头
             let validPartialPattern = "[+＋]?(\\s*\\d)+\\s*$|\(PhoneNumberPatterns.validPhoneNumberPattern)"
             let validNumberMatches = try regexManager?.regexMatches(validPartialPattern, string: rawNumber)
             let validStart = self.regexManager?.stringPositionByRegex(PhoneNumberPatterns.validStartPattern, string: rawNumber)
