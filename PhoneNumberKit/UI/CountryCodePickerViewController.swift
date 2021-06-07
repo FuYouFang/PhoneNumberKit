@@ -29,10 +29,19 @@ public class CountryCodePickerViewController: UITableViewController {
         .sorted(by: { $0.name.caseInsensitiveCompare($1.name) == .orderedAscending })
 
     lazy var countries: [[Country]] = {
+        /*
+         allCountryies 已将所有的国家进行了排序
+         
+         接下来是对所有的国家进行分组
+         
+         下一个 country 的第一个字符和最后一个分组的第一个 country 的第一个字符是否相等
+         */
+        
         let countries = allCountries
             .reduce([[Country]]()) { collection, country in
                 var collection = collection
                 guard var lastGroup = collection.last else { return [[country]] }
+                // 变音字符不敏感
                 let lhs = lastGroup.first?.name.folding(options: .diacriticInsensitive, locale: nil)
                 let rhs = country.name.folding(options: .diacriticInsensitive, locale: nil)
                 if lhs?.first == rhs.first {
@@ -76,6 +85,7 @@ public class CountryCodePickerViewController: UITableViewController {
     {
         self.phoneNumberKit = phoneNumberKit
         self.commonCountryCodes = commonCountryCodes
+        // 此处修改 style
         super.init(style: .grouped)
         self.commonInit()
     }
@@ -95,6 +105,7 @@ public class CountryCodePickerViewController: UITableViewController {
         searchController.obscuresBackgroundDuringPresentation = false
         searchController.searchBar.backgroundColor = .clear
         navigationItem.searchController = searchController
+        #warning("todo definesPresentationContext 是做什么用的")
         definesPresentationContext = true
     }
 
