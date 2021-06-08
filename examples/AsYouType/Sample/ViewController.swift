@@ -39,6 +39,11 @@ class ViewController: UIViewController, CNContactPickerDelegate {
     }
 
     @IBAction func didTapView(_ sender: Any) {
+        if let range = textField.selectedTextRange {
+            let location = textField.offset(from: textField.beginningOfDocument, to: range.end)
+            debugPrint("range.end:\(range.end), location:\(location)")
+        }
+        
         self.textField.resignFirstResponder()
     }
 

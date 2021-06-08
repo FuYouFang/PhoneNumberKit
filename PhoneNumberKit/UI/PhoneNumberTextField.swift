@@ -154,6 +154,11 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
         return mutableSet as NSCharacterSet
     }()
 
+    
+    /// 当前类实现了自己的代理，但是不能影响其他类使用当前类的代理
+    /// 所以类有两个 deleget:
+    /// 1. super.delegate = self
+    /// 2. _delegate
     private weak var _delegate: UITextFieldDelegate?
 
     open override var delegate: UITextFieldDelegate? {
@@ -284,6 +289,10 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
             .joined()
 
         self.flagButton.setTitle(flag + " ", for: .normal)
+        /*
+         下面两行代码为什么不写成：
+         self.flagButton.titleLabel?.font = font ?? UIFont.preferredFont(forTextStyle: .body)
+         */
         let fontSize = (font ?? UIFont.preferredFont(forTextStyle: .body)).pointSize
         self.flagButton.titleLabel?.font = UIFont.systemFont(ofSize: fontSize)
     }
@@ -342,10 +351,15 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
      */
 
     internal struct CursorPosition {
-        let numberAfterCursor: String
-        let repetitionCountFromEnd: Int
+        let numberAfterCursor: String // 光标后的数字
+        let repetitionCountFromEnd: Int // 从光标后面看一共有多少个重复的
     }
 
+    
+    /// 提取当前的光标位置
+    /// 从**当前是的字符串** 当前位置向后查找，找到第一个电话号的字符，然后看后面一共有多少个
+    /// 然后在**新的字符串**当中，找到对应的字符位置，即为新的选中位置
+    /// - Returns:
     internal func extractCursorPosition() -> CursorPosition? {
         var repetitionCountFromEnd = 0
         // Check that there is text in the UITextField
@@ -353,12 +367,20 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
             return nil
         }
         let textAsNSString = text as NSString
+        // 从文章的开始，到光标的位置
+        // UITextPosition 最前面为 0，一个字符之后 +1
+        // 所有 cursorEnd 偏移量为光标后的的字符
+        // func offset(from: UITextPosition, to toPosition: UITextPosition) -> Int
         let cursorEnd = offset(from: beginningOfDocument, to: selectedTextRange.end)
+        
+        // 如果光标的后面为空格等，则向后查找
         // Look for the next valid number after the cursor, when found return a CursorPosition struct
         for i in cursorEnd..<textAsNSString.length {
             let cursorRange = NSRange(location: i, length: 1)
-            let candidateNumberAfterCursor: NSString = textAsNSString.substring(with: cursorRange) as NSString
+            let candidateNumberAfterCursor = textAsNSString.substring(with: cursorRange) as NSString
+            // 如果不是空格等
             if candidateNumberAfterCursor.rangeOfCharacter(from: self.nonNumericSet as CharacterSet).location == NSNotFound {
+                // 感觉直接从下个目标找就行了
                 for j in cursorRange.location..<textAsNSString.length {
                     let candidateCharacter = textAsNSString.substring(with: NSRange(location: j, length: 1))
                     if candidateCharacter == candidateNumberAfterCursor as String {
@@ -372,13 +394,15 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     }
 
     // Finds position of previous cursor in new formatted text
-    internal func selectionRangeForNumberReplacement(textField: UITextField, formattedText: String) -> NSRange? {
-        let textAsNSString = formattedText as NSString
-        var countFromEnd = 0
+    internal func selectionRangeForNumberReplacement(textField: UITextField,
+                                                     formattedText: String) -> NSRange? {
         guard let cursorPosition = extractCursorPosition() else {
             return nil
         }
+        let textAsNSString = formattedText as NSString
+        var countFromEnd = 0
 
+        //
         for i in stride(from: textAsNSString.length - 1, through: 0, by: -1) {
             let candidateRange = NSRange(location: i, length: 1)
             let candidateCharacter = textAsNSString.substring(with: candidateRange)
@@ -415,24 +439,43 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
         let changedRange = textAsNSString.substring(with: range) as NSString
         let modifiedTextField = textAsNSString.replacingCharacters(in: range, with: string)
 
-        let filteredCharacters = modifiedTextField.filter {
-            String($0).rangeOfCharacter(from: (textField as! PhoneNumberTextField).nonNumericSet as CharacterSet) == nil
-        }
-        let rawNumberString = String(filteredCharacters)
-
-        let formattedNationalNumber = self.partialFormatter.formatPartial(rawNumberString as String)
+        
         var selectedTextRange: NSRange?
 
+        // 修改的位置有非法字符
         let nonNumericRange = (changedRange.rangeOfCharacter(from: self.nonNumericSet as CharacterSet).location != NSNotFound)
+        // 修个分成了两种情况：
+        // 1. 删除了一个字符串，并且删除的位置为非法字符
+        //    则将 text 赋值为修改后的内容，直接通过删除当前位置的字符后的字符串进行定位
+        // 2. 添加、删除多个字符
+        //    则首先移出所有的非法字符，然后格式化，通过格式化后的字符串进行定位
         if range.length == 1, string.isEmpty, nonNumericRange {
+            // modifiedTextField 修改后的字符
             selectedTextRange = self.selectionRangeForNumberReplacement(textField: textField, formattedText: modifiedTextField)
             textField.text = modifiedTextField
         } else {
+            // 过滤非法字符
+            let filteredCharacters = modifiedTextField.filter {
+                String($0).rangeOfCharacter(from: (textField as! PhoneNumberTextField).nonNumericSet as CharacterSet) == nil
+            }
+            let rawNumberString = String(filteredCharacters)
+
+            let formattedNationalNumber = self.partialFormatter.formatPartial(rawNumberString)
+            // formattedNationalNumber 格式化后的字符
             selectedTextRange = self.selectionRangeForNumberReplacement(textField: textField, formattedText: formattedNationalNumber)
             textField.text = formattedNationalNumber
         }
+        // 发送 editingChanged 通知
         sendActions(for: .editingChanged)
-        if let selectedTextRange = selectedTextRange, let selectionRangePosition = textField.position(from: beginningOfDocument, offset: selectedTextRange.location) {
+        /*
+         selectedTextRange
+         selectionRangePosition 开始的位置
+         selectionRange 选择的区间
+         */
+        if let selectedTextRange = selectedTextRange,
+           let selectionRangePosition = textField.position(from: beginningOfDocument,
+                                                           offset: selectedTextRange.location) {
+            
             let selectionRange = textField.textRange(from: selectionRangePosition, to: selectionRangePosition)
             textField.selectedTextRange = selectionRange
         }
@@ -453,7 +496,10 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     }
 
     open func textFieldDidBeginEditing(_ textField: UITextField) {
-        if self.withExamplePlaceholder, self.withPrefix, let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description, (text ?? "").isEmpty {
+        if self.withExamplePlaceholder,
+           self.withPrefix,
+           let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description,
+           (text ?? "").isEmpty {
             text = "+" + countryCode + " "
         }
         self._delegate?.textFieldDidBeginEditing?(textField)
@@ -471,6 +517,8 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     @available (iOS 10.0, tvOS 10.0, *)
     open func textFieldDidEndEditing(_ textField: UITextField, reason: UITextField.DidEndEditingReason) {
         updateTextFieldDidEndEditing(textField)
+        
+        // 应该是兼容老版本
         if let _delegate = _delegate {
             if (_delegate.responds(to: #selector(textFieldDidEndEditing(_:reason:)))) {
                 _delegate.textFieldDidEndEditing?(textField, reason: reason)
@@ -489,7 +537,11 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     }
 
     private func updateTextFieldDidEndEditing(_ textField: UITextField) {
-        if self.withExamplePlaceholder, self.withPrefix, let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description,
+        // 编辑结束的时候，如果 text 中，只有区号，则清空
+        // 这样就可以显示 placeholder 了
+        // 当再次开始编辑的时候，从再加上区号
+        if self.withExamplePlaceholder, self.withPrefix,
+           let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description,
             let text = textField.text,
             text == internationalPrefix(for: countryCode) {
             textField.text = ""
